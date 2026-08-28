@@ -93,6 +93,13 @@ const PLAYLISTS: &[&str] = &[
     "Deep work",
     "Road trip",
     "Kitchen jams",
+    "Daily Mix 1",
+    "Daily Mix 2",
+    "Daily Mix 3",
+    "Daily Mix 4",
+    "Daily Mix 5",
+    "Daily Mix 6",
+    "daylist",
 ];
 
 fn artist_ref(index: usize) -> ArtistRef {
@@ -163,7 +170,8 @@ fn track(index: usize) -> Track {
 
 fn playlist(index: usize) -> Playlist {
     let name = PLAYLISTS[index % PLAYLISTS.len()];
-    let spotify_owned = matches!(name, "Discover Weekly" | "Release Radar");
+    let spotify_owned = matches!(name, "Discover Weekly" | "Release Radar" | "daylist")
+        || name.starts_with("Daily Mix ");
     Playlist {
         id: format!("pl{index}"),
         name: name.to_string(),

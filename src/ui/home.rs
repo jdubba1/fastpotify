@@ -4,7 +4,7 @@ use egui::{CornerRadius, Rect, Sense, Vec2, pos2, vec2};
 
 use crate::api::models::{PlayableItem, Playlist, pick_image};
 use crate::app::App;
-use crate::model::{Action, DISCOVER_TERMS, Loadable, Page, RowContext};
+use crate::model::{Action, Loadable, Page, RowContext};
 use crate::theme::{self, Icon};
 
 use super::widgets::{self, TrackRow};
@@ -44,8 +44,15 @@ fn quick_access(app: &mut App, ui: &mut egui::Ui) {
             .map(|user| format!("spotify:user:{}:collection", user.id)),
         liked: true,
     }];
-    if let Some(playlists) = app.library.playlists.get() {
-        for playlist in playlists.iter().take(7) {
+    for name in ["Discover Weekly", "Release Radar"] {
+        if let Some(playlist) = discovered_playlists(app, name)
+            .and_then(|playlists| {
+                playlists
+                    .iter()
+                    .find(|playlist| playlist.name.eq_ignore_ascii_case(name))
+            })
+            .cloned()
+        {
             tiles.push(Tile {
                 image: pick_image(&playlist.images, 64).map(str::to_string),
                 name: playlist.name.clone(),
@@ -148,26 +155,44 @@ fn quick_access(app: &mut App, ui: &mut egui::Ui) {
     }
 }
 
+fn discovered_playlists<'a>(app: &'a App, term: &str) -> Option<&'a [Playlist]> {
+    app.home
+        .discover
+        .get(term)
+        .and_then(Loadable::get)
+        .map(Vec::as_slice)
+}
+
+fn daily_mix_number(name: &str) -> Option<u8> {
+    let number = name.strip_prefix("Daily Mix ")?.parse().ok()?;
+    (1..=6).contains(&number).then_some(number)
+}
+
 fn made_for_you(app: &mut App, ui: &mut egui::Ui) {
     let palette = app.palette;
-    let mut playlists: Vec<Playlist> = Vec::new();
-    let mut loading = false;
-    for term in DISCOVER_TERMS {
-        match app.home.discover.get(*term) {
-            Some(Loadable::Loaded(list)) => {
-                for playlist in list {
-                    let duplicate = playlists.iter().any(|existing| {
-                        existing.id == playlist.id
-                            || existing.name.eq_ignore_ascii_case(&playlist.name)
-                    });
-                    if !duplicate {
-                        playlists.push(playlist.clone());
-                    }
-                }
-            }
-            Some(Loadable::Loading) => loading = true,
-            _ => {}
-        }
+    let loading = ["Daily Mix", "daylist"]
+        .iter()
+        .any(|term| matches!(app.home.discover.get(*term), Some(Loadable::Loading)));
+    let mut mixes: Vec<(u8, Playlist)> = discovered_playlists(app, "Daily Mix")
+        .into_iter()
+        .flatten()
+        .filter_map(|playlist| Some((daily_mix_number(&playlist.name)?, playlist.clone())))
+        .collect();
+    mixes.sort_by_key(|(number, _)| *number);
+    let mut playlists: Vec<Playlist> = mixes
+        .into_iter()
+        .take(6)
+        .map(|(_, playlist)| playlist)
+        .collect();
+    if let Some(daylist) = discovered_playlists(app, "daylist")
+        .and_then(|playlists| {
+            playlists
+                .iter()
+                .find(|playlist| playlist.name.to_lowercase().contains("daylist"))
+        })
+        .cloned()
+    {
+        playlists.push(daylist);
     }
     if playlists.is_empty() && !loading {
         return;
@@ -229,7 +254,7 @@ fn recently_played(app: &mut App, ui: &mut egui::Ui) {
                 .as_ref()
                 .is_some_and(|id| seen.insert(id.clone()))
         })
-        .take(16)
+        .take(6)
         .collect();
     if tracks.is_empty() {
         return;
@@ -387,4 +412,17 @@ fn top_tracks(app: &mut App, ui: &mut egui::Ui) {
 fn recommendations(app: &mut App, ui: &mut egui::Ui) {
     let tracks = app.home.recommendations.clone();
     track_list(app, ui, "Recommended for you", tracks, 20, None, None);
+}
+
+#[cfg(test)]
+mod tests {
+    use super::daily_mix_number;
+
+    #[test]
+    fn only_numbered_daily_mixes_one_through_six_are_homeworthy() {
+        assert_eq!(daily_mix_number("Daily Mix 1"), Some(1));
+        assert_eq!(daily_mix_number("Daily Mix 6"), Some(6));
+        assert_eq!(daily_mix_number("Daily Mix 7"), None);
+        assert_eq!(daily_mix_number("Daily Mix"), None);
+    }
 }
