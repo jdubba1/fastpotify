@@ -412,24 +412,18 @@ pub fn show(app: &mut App, ui: &mut egui::Ui) {
 
     section(ui, &palette, "Appearance", |ui| {
         widgets::setting_row(ui, &palette, "Theme", "", |ui| {
-            ui.horizontal(|ui| {
-                ui.spacing_mut().item_spacing.x = 6.0;
-                for choice in ThemeChoice::ALL {
-                    if theme::soft_button(
-                        ui,
-                        &palette,
-                        None,
-                        choice.label(),
-                        app.settings.theme == choice,
-                    )
-                    .clicked()
-                        && app.settings.theme != choice
-                    {
-                        app.settings.theme = choice;
-                        changed = true;
+            egui::ComboBox::from_id_salt("theme-choice")
+                .selected_text(app.settings.theme.label())
+                .show_ui(ui, |ui| {
+                    for choice in ThemeChoice::ALL {
+                        if ui
+                            .selectable_value(&mut app.settings.theme, choice, choice.label())
+                            .changed()
+                        {
+                            changed = true;
+                        }
                     }
-                }
-            });
+                });
         });
         widgets::setting_row(
             ui,

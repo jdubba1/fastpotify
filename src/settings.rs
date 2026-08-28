@@ -9,16 +9,29 @@ use serde::{Deserialize, Serialize};
 pub enum ThemeChoice {
     #[default]
     Dark,
+    Kintsugi,
+    Gruvbox,
+    Everforest,
     Light,
     System,
 }
 
 impl ThemeChoice {
-    pub const ALL: [ThemeChoice; 3] = [Self::Dark, Self::Light, Self::System];
+    pub const ALL: [ThemeChoice; 6] = [
+        Self::Dark,
+        Self::Kintsugi,
+        Self::Gruvbox,
+        Self::Everforest,
+        Self::Light,
+        Self::System,
+    ];
 
     pub fn label(self) -> &'static str {
         match self {
             Self::Dark => "Dark",
+            Self::Kintsugi => "Kintsugi Dark",
+            Self::Gruvbox => "Gruvbox Dark",
+            Self::Everforest => "Everforest Dark",
             Self::Light => "Light",
             Self::System => "Follow system",
         }

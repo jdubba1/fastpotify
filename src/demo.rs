@@ -586,6 +586,18 @@ pub fn apply_flags(app: &mut App, page: Option<&str>, show: Option<&str>) {
                 app.settings.theme = crate::settings::ThemeChoice::Light;
                 app.actions.push(Action::SettingsChanged);
             }
+            "kintsugi" => {
+                app.settings.theme = crate::settings::ThemeChoice::Kintsugi;
+                app.actions.push(Action::SettingsChanged);
+            }
+            "gruvbox" => {
+                app.settings.theme = crate::settings::ThemeChoice::Gruvbox;
+                app.actions.push(Action::SettingsChanged);
+            }
+            "everforest" => {
+                app.settings.theme = crate::settings::ThemeChoice::Everforest;
+                app.actions.push(Action::SettingsChanged);
+            }
             "focus" => app.settings.sidebar_visible = false,
             "lyrics" => {
                 app.lyrics_uri = app.now_playing().map(|now| now.uri);
