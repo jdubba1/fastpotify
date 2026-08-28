@@ -73,6 +73,11 @@ pub fn show(app: &mut App, ui: &mut egui::Ui) {
                 app.actions.push(Action::ToggleSidebar);
             }
             ui.add_space(2.0);
+            if !app.settings.sidebar_visible
+                && nav_button(ui, &palette, Icon::House, true, "Home").clicked()
+            {
+                app.actions.push(Action::Open(Page::Home));
+            }
             if nav_button(ui, &palette, Icon::ChevronLeft, app.can_go_back(), "Back").clicked() {
                 app.actions.push(Action::Back);
             }
