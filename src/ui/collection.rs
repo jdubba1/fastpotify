@@ -22,14 +22,14 @@ pub struct Hero<'a> {
 
 pub fn hero(app: &mut App, ui: &mut egui::Ui, hero: Hero<'_>) {
     let palette = app.palette;
-    ui.add_space(12.0);
+    ui.add_space(8.0);
     let cover_size = if ui.available_width() > 720.0 {
-        212.0
+        184.0
     } else {
-        160.0
+        148.0
     };
     ui.horizontal(|ui| {
-        ui.spacing_mut().item_spacing.x = 24.0;
+        ui.spacing_mut().item_spacing.x = 18.0;
         let (rect, _) = ui.allocate_exact_size(Vec2::splat(cover_size), Sense::hover());
         let radius = if hero.round { cover_size / 2.0 } else { 6.0 };
         widgets::paint_shadow(ui, &palette, rect, radius);
@@ -48,10 +48,10 @@ pub fn hero(app: &mut App, ui: &mut egui::Ui, hero: Hero<'_>) {
         ui.vertical(|ui| {
             let width = ui.available_width();
             ui.set_width(width);
-            ui.spacing_mut().item_spacing.y = 6.0;
-            ui.add_space(cover_size * 0.08);
+            ui.spacing_mut().item_spacing.y = 5.0;
+            ui.add_space(cover_size * 0.06);
             theme::text(ui, hero.kind, theme::medium(12.5), palette.text);
-            let mut size = if cover_size > 200.0 { 56.0 } else { 40.0 };
+            let mut size = if cover_size > 170.0 { 46.0 } else { 36.0 };
             loop {
                 let galley = ui.painter().layout_no_wrap(
                     hero.title.to_string(),
@@ -106,7 +106,7 @@ pub fn hero(app: &mut App, ui: &mut egui::Ui, hero: Hero<'_>) {
             });
         });
     });
-    ui.add_space(20.0);
+    ui.add_space(12.0);
 }
 
 pub struct Actions<'a> {

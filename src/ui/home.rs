@@ -11,11 +11,11 @@ use super::widgets::{self, TrackRow};
 
 pub fn show(app: &mut App, ui: &mut egui::Ui) {
     let palette = app.palette;
-    ui.add_space(6.0);
-    theme::text(ui, crate::util::greeting(), theme::bold(30.0), palette.text);
-    ui.add_space(12.0);
+    ui.add_space(4.0);
+    theme::text(ui, crate::util::greeting(), theme::bold(26.0), palette.text);
+    ui.add_space(8.0);
     quick_access(app, ui);
-    ui.add_space(16.0);
+    ui.add_space(10.0);
 
     made_for_you(app, ui);
     recently_played(app, ui);
@@ -56,8 +56,8 @@ fn quick_access(app: &mut App, ui: &mut egui::Ui) {
         }
     }
     let available = ui.available_width();
-    let columns = ((available / 300.0).floor() as usize).clamp(2, 4);
-    let gap = 10.0;
+    let columns = ((available / 250.0).floor() as usize).clamp(2, 5);
+    let gap = 8.0;
     let tile_width = (available - gap * (columns as f32 - 1.0)) / columns as f32;
     let rows = tiles.len().div_ceil(columns);
     for row in 0..rows {
@@ -75,7 +75,7 @@ fn quick_access(app: &mut App, ui: &mut egui::Ui) {
                     break;
                 };
                 let (rect, response) =
-                    ui.allocate_exact_size(vec2(tile_width, 60.0), Sense::click());
+                    ui.allocate_exact_size(vec2(tile_width, 52.0), Sense::click());
                 if ui.is_rect_visible(rect) {
                     let hovered = ui.rect_contains_pointer(rect);
                     let fill = if hovered {
@@ -84,7 +84,7 @@ fn quick_access(app: &mut App, ui: &mut egui::Ui) {
                         palette.surface
                     };
                     ui.painter().rect_filled(rect, CornerRadius::same(6), fill);
-                    let cover = Rect::from_min_size(rect.min, Vec2::splat(60.0));
+                    let cover = Rect::from_min_size(rect.min, Vec2::splat(52.0));
                     if *liked {
                         super::sidebar::liked_cover(ui, cover, 6.0);
                     } else {
@@ -97,22 +97,22 @@ fn quick_access(app: &mut App, ui: &mut egui::Ui) {
                             Icon::Music,
                         );
                     }
-                    let play_room = if hovered && uri.is_some() { 52.0 } else { 12.0 };
+                    let play_room = if hovered && uri.is_some() { 46.0 } else { 10.0 };
                     let text_rect = Rect::from_min_max(
-                        pos2(cover.right() + 12.0, rect.top()),
+                        pos2(cover.right() + 10.0, rect.top()),
                         pos2(rect.right() - play_room, rect.bottom()),
                     );
                     ui.painter().with_clip_rect(text_rect).text(
                         pos2(text_rect.left(), rect.center().y),
                         egui::Align2::LEFT_CENTER,
                         name,
-                        theme::bold(14.5),
+                        theme::semibold(14.0),
                         palette.text,
                     );
                     if hovered && let Some(uri) = uri {
                         let button = Rect::from_center_size(
-                            pos2(rect.right() - 28.0, rect.center().y),
-                            Vec2::splat(40.0),
+                            pos2(rect.right() - 24.0, rect.center().y),
+                            Vec2::splat(36.0),
                         );
                         let mut child =
                             ui.new_child(egui::UiBuilder::new().max_rect(button).layout(
@@ -121,7 +121,7 @@ fn quick_access(app: &mut App, ui: &mut egui::Ui) {
                         if theme::circle_button(
                             &mut child,
                             Icon::PlayFilled,
-                            40.0,
+                            36.0,
                             palette.accent,
                             palette.accent_hover,
                             palette.on_accent,
