@@ -55,7 +55,7 @@ pub fn show(app: &mut App, ui: &mut egui::Ui) {
         Layout::left_to_right(Align::Center),
         |ui| {
             ui.add_space(super::widgets::PAGE_PADDING);
-            ui.spacing_mut().item_spacing.x = 8.0;
+            ui.spacing_mut().item_spacing.x = 6.0;
             if nav_button(ui, &palette, Icon::ChevronLeft, app.can_go_back(), "Back").clicked() {
                 app.actions.push(Action::Back);
             }
@@ -70,9 +70,9 @@ pub fn show(app: &mut App, ui: &mut egui::Ui) {
             {
                 app.actions.push(Action::Forward);
             }
-            ui.add_space(8.0);
+            ui.add_space(6.0);
 
-            let search_width = (ui.available_width() * 0.5).clamp(200.0, 440.0);
+            let search_width = (ui.available_width() * 0.48).clamp(200.0, 400.0);
             let id = egui::Id::new("global-search");
             let before = app.search.query.clone();
             let response = super::widgets::search_field(

@@ -10,9 +10,9 @@ use crate::model::{Action, Dialog, Page, RowContext};
 use crate::theme::{self, Icon, Palette};
 use crate::util;
 
-pub const CARD_WIDTH: f32 = 172.0;
-pub const CARD_GAP: f32 = 14.0;
-pub const PAGE_PADDING: f32 = 24.0;
+pub const CARD_WIDTH: f32 = 156.0;
+pub const CARD_GAP: f32 = 10.0;
+pub const PAGE_PADDING: f32 = 20.0;
 
 /// Draws an image (or a placeholder) in a square.
 pub fn cover(
@@ -1005,8 +1005,8 @@ pub fn card(
     playable: bool,
 ) -> CardResponse {
     let palette = app.palette;
-    let image_size = CARD_WIDTH - 24.0;
-    let height = image_size + 70.0;
+    let image_size = CARD_WIDTH - 20.0;
+    let height = image_size + 64.0;
     let (rect, response) = ui.allocate_exact_size(vec2(CARD_WIDTH, height), Sense::click());
     let mut play = false;
     if ui.is_rect_visible(rect) {
@@ -1020,7 +1020,7 @@ pub fn card(
                     .gamma_multiply(if palette.dark { 0.8 } else { 1.0 }),
             );
         }
-        let image_rect = Rect::from_min_size(rect.min + vec2(12.0, 12.0), Vec2::splat(image_size));
+        let image_rect = Rect::from_min_size(rect.min + vec2(10.0, 10.0), Vec2::splat(image_size));
         let radius = if round { image_size / 2.0 } else { 6.0 };
         paint_shadow(ui, &palette, image_rect, radius);
         paint_cover(
@@ -1031,8 +1031,8 @@ pub fn card(
             radius,
             if round { Icon::User } else { Icon::Music },
         );
-        let text_left = rect.left() + 12.0;
-        let text_width = CARD_WIDTH - 24.0;
+        let text_left = rect.left() + 10.0;
+        let text_width = CARD_WIDTH - 20.0;
         let title_galley = ellipsized(
             ui,
             title,
@@ -1042,7 +1042,7 @@ pub fn card(
             1,
         );
         let title_rect = Rect::from_min_size(
-            pos2(text_left, image_rect.bottom() + 10.0),
+            pos2(text_left, image_rect.bottom() + 8.0),
             vec2(text_width, 20.0),
         );
         ui.painter()
@@ -1064,8 +1064,8 @@ pub fn card(
 
         if playable && hovered {
             let button_rect = Rect::from_center_size(
-                pos2(image_rect.right() - 26.0, image_rect.bottom() - 26.0),
-                Vec2::splat(44.0),
+                pos2(image_rect.right() - 23.0, image_rect.bottom() - 23.0),
+                Vec2::splat(40.0),
             );
             let mut child = ui.new_child(
                 UiBuilder::new()
@@ -1075,7 +1075,7 @@ pub fn card(
             play = theme::circle_button(
                 &mut child,
                 Icon::PlayFilled,
-                44.0,
+                40.0,
                 palette.accent,
                 palette.accent_hover,
                 palette.on_accent,
@@ -1099,7 +1099,7 @@ pub fn shelf(
     title: &str,
     add_contents: impl FnOnce(&mut Ui),
 ) {
-    ui.add_space(8.0);
+    ui.add_space(6.0);
     theme::section_title(ui, palette, title);
     ui.add_space(4.0);
     egui::ScrollArea::horizontal()
@@ -1111,7 +1111,7 @@ pub fn shelf(
                 add_contents(ui);
             });
         });
-    ui.add_space(12.0);
+    ui.add_space(8.0);
 }
 
 /// A wrapping grid of cards.

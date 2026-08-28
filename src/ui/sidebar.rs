@@ -7,7 +7,7 @@ use crate::app::App;
 use crate::model::{Action, Dialog, Loadable, Page};
 use crate::theme::{self, Icon, Palette};
 
-const ROW_HEIGHT: f32 = 60.0;
+const ROW_HEIGHT: f32 = 52.0;
 
 #[derive(Clone, Copy, PartialEq, Eq, Default)]
 enum Filter {
@@ -35,13 +35,13 @@ pub fn show(app: &mut App, ui: &mut egui::Ui) {
     let panel = egui::Panel::left("sidebar")
         .resizable(true)
         .default_size(app.settings.sidebar_width)
-        .size_range(210.0..=440.0)
+        .size_range(190.0..=360.0)
         .show_separator_line(false)
         .frame(Frame::new().fill(palette.panel).inner_margin(Margin {
-            left: 12,
-            right: 8,
-            top: 12,
-            bottom: 8,
+            left: 8,
+            right: 6,
+            top: 8,
+            bottom: 6,
         }));
     let response = panel.show(ui, |ui| {
         contents(app, ui);
@@ -60,7 +60,7 @@ fn nav_row(
     label: &str,
     active: bool,
 ) -> egui::Response {
-    let (rect, response) = ui.allocate_exact_size(vec2(ui.available_width(), 40.0), Sense::click());
+    let (rect, response) = ui.allocate_exact_size(vec2(ui.available_width(), 36.0), Sense::click());
     if ui.is_rect_visible(rect) {
         let color = if active || response.hovered() {
             palette.text
@@ -68,13 +68,13 @@ fn nav_row(
             palette.secondary
         };
         let icon_rect =
-            Rect::from_center_size(pos2(rect.left() + 22.0, rect.center().y), Vec2::splat(22.0));
-        icon.image(color, 22.0).paint_at(ui, icon_rect);
+            Rect::from_center_size(pos2(rect.left() + 18.0, rect.center().y), Vec2::splat(20.0));
+        icon.image(color, 20.0).paint_at(ui, icon_rect);
         ui.painter().text(
-            pos2(rect.left() + 46.0, rect.center().y),
+            pos2(rect.left() + 38.0, rect.center().y),
             egui::Align2::LEFT_CENTER,
             label,
-            theme::bold(15.0),
+            theme::semibold(14.0),
             color,
         );
     }
@@ -417,8 +417,8 @@ fn contents(app: &mut App, ui: &mut egui::Ui) {
                         );
                     }
                     let cover_rect = Rect::from_center_size(
-                        pos2(rect.left() + 8.0 + 22.0, rect.center().y),
-                        Vec2::splat(44.0),
+                        pos2(rect.left() + 7.0 + 19.0, rect.center().y),
+                        Vec2::splat(38.0),
                     );
                     if entry.liked {
                         liked_cover(ui, cover_rect, 6.0);
@@ -428,11 +428,11 @@ fn contents(app: &mut App, ui: &mut egui::Ui) {
                             &palette,
                             entry.image.as_deref(),
                             cover_rect,
-                            if entry.round { 22.0 } else { 6.0 },
+                            if entry.round { 19.0 } else { 5.0 },
                             if entry.round { Icon::User } else { Icon::Music },
                         );
                     }
-                    let text_left = cover_rect.right() + 12.0;
+                    let text_left = cover_rect.right() + 10.0;
                     let text_right = rect.right() - if playing || pinned { 28.0 } else { 8.0 };
                     let painter = ui.painter().with_clip_rect(Rect::from_min_max(
                         pos2(text_left, rect.top()),
@@ -447,14 +447,14 @@ fn contents(app: &mut App, ui: &mut egui::Ui) {
                         pos2(text_left, rect.center().y - 9.0),
                         egui::Align2::LEFT_CENTER,
                         &entry.name,
-                        theme::medium(14.0),
+                        theme::medium(13.5),
                         name_color,
                     );
                     painter.text(
                         pos2(text_left, rect.center().y + 10.0),
                         egui::Align2::LEFT_CENTER,
                         &entry.subtitle,
-                        theme::regular(12.5),
+                        theme::regular(12.0),
                         palette.secondary,
                     );
                     if playing {

@@ -77,7 +77,7 @@ impl Default for Settings {
             theme: ThemeChoice::Dark,
             accent_from_art: true,
             volume: (u16::MAX as u32 * 70 / 100) as u16,
-            sidebar_width: 250.0,
+            sidebar_width: 220.0,
             search_history: Vec::new(),
             show_shortcut_hints: true,
             web_client_id: None,
