@@ -272,6 +272,7 @@ pub fn populate(app: &mut App) {
         app.saved.insert(playlist.uri.clone(), true);
     }
     app.library.playlists = Loadable::Loaded(playlists.clone());
+    app.settings.pinned_contexts = vec![playlists[1].uri.clone(), playlists[2].uri.clone()];
 
     let tracks: Vec<Track> = (0..40).map(track).collect();
     for (index, track) in tracks.iter().enumerate() {

@@ -2,12 +2,12 @@
 
 use egui::{CornerRadius, Rect, Sense, Vec2, pos2, vec2};
 
-use crate::api::models::{PlayableItem, Playlist, pick_image};
+use crate::api::models::{Playlist, pick_image};
 use crate::app::App;
-use crate::model::{Action, Loadable, Page, RowContext};
+use crate::model::{Action, Loadable, Page};
 use crate::theme::{self, Icon};
 
-use super::widgets::{self, TrackRow};
+use super::widgets;
 
 pub fn show(app: &mut App, ui: &mut egui::Ui) {
     let palette = app.palette;
@@ -19,9 +19,6 @@ pub fn show(app: &mut App, ui: &mut egui::Ui) {
 
     made_for_you(app, ui);
     recently_played(app, ui);
-    top_artists(app, ui);
-    top_tracks(app, ui);
-    recommendations(app, ui);
 }
 
 struct Tile {
@@ -60,6 +57,25 @@ fn quick_access(app: &mut App, ui: &mut egui::Ui) {
                 uri: Some(playlist.uri.clone()),
                 liked: false,
             });
+        }
+    }
+    if let Some(playlists) = app.library.playlists.get() {
+        for uri in &app.settings.pinned_contexts {
+            if tiles
+                .iter()
+                .any(|tile| tile.uri.as_deref() == Some(uri.as_str()))
+            {
+                continue;
+            }
+            if let Some(playlist) = playlists.iter().find(|playlist| playlist.uri == *uri) {
+                tiles.push(Tile {
+                    image: pick_image(&playlist.images, 64).map(str::to_string),
+                    name: playlist.name.clone(),
+                    page: Page::Playlist(playlist.id.clone()),
+                    uri: Some(playlist.uri.clone()),
+                    liked: false,
+                });
+            }
         }
     }
     let available = ui.available_width();
@@ -181,7 +197,7 @@ fn made_for_you(app: &mut App, ui: &mut egui::Ui) {
     mixes.sort_by_key(|(number, _)| *number);
     let mut playlists: Vec<Playlist> = mixes
         .into_iter()
-        .take(6)
+        .take(7)
         .map(|(_, playlist)| playlist)
         .collect();
     if let Some(daylist) = discovered_playlists(app, "daylist")
@@ -286,132 +302,6 @@ fn recently_played(app: &mut App, ui: &mut egui::Ui) {
             }
         }
     });
-}
-
-fn top_artists(app: &mut App, ui: &mut egui::Ui) {
-    let palette = app.palette;
-    let artists = match &app.home.top_artists {
-        Loadable::Loaded(artists) => artists.clone(),
-        Loadable::Loading | Loadable::NotLoaded => {
-            widgets::shelf(ui, &palette, "top-artists", "Your top artists", |ui| {
-                widgets::loading_row(ui, &palette)
-            });
-            return;
-        }
-        Loadable::Failed(_) => return,
-    };
-    if artists.is_empty() {
-        return;
-    }
-    widgets::shelf(ui, &palette, "top-artists", "Your top artists", |ui| {
-        for artist in &artists {
-            let card = widgets::card(
-                ui,
-                app,
-                pick_image(&artist.images, 300),
-                &artist.name,
-                "Artist",
-                true,
-                true,
-            );
-            if card.play {
-                app.actions.push(Action::PlayContext {
-                    uri: artist.uri.clone(),
-                    offset_uri: None,
-                    offset_index: None,
-                });
-            }
-            if card.clicked {
-                app.actions
-                    .push(Action::Open(Page::Artist(artist.id.clone())));
-            }
-        }
-    });
-}
-
-fn track_list(
-    app: &mut App,
-    ui: &mut egui::Ui,
-    title: &str,
-    tracks: Loadable<Vec<crate::api::models::Track>>,
-    limit: usize,
-    title_page: Option<Page>,
-    more_label: Option<&str>,
-) {
-    let palette = app.palette;
-    let tracks = match tracks {
-        Loadable::Loaded(tracks) => tracks,
-        Loadable::Loading | Loadable::NotLoaded => {
-            if let Some(page) = title_page {
-                if theme::link(ui, title, theme::bold(17.0), palette.text).clicked() {
-                    app.actions.push(Action::Open(page));
-                }
-            } else {
-                theme::section_title(ui, &palette, title);
-            }
-            widgets::loading_row(ui, &palette);
-            ui.add_space(12.0);
-            return;
-        }
-        Loadable::Failed(_) => return,
-    };
-    if tracks.is_empty() {
-        return;
-    }
-    if let Some(page) = title_page {
-        if theme::link(ui, title, theme::bold(17.0), palette.text).clicked() {
-            app.actions.push(Action::Open(page));
-        }
-    } else {
-        theme::section_title(ui, &palette, title);
-    }
-    ui.add_space(4.0);
-    let uris: Vec<String> = tracks.iter().map(|track| track.uri.clone()).collect();
-    let context = RowContext::Uris(uris);
-    let items: Vec<PlayableItem> = tracks.into_iter().map(PlayableItem::Track).collect();
-    for (index, item) in items.iter().take(limit).enumerate() {
-        widgets::track_row(
-            ui,
-            app,
-            TrackRow {
-                index,
-                number: None,
-                item,
-                context: &context,
-                show_cover: true,
-                show_album: true,
-                added_at: None,
-                added_by: None,
-                show_added_by: false,
-                compact: false,
-            },
-        );
-    }
-    if let Some(label) = more_label
-        && items.len() > limit
-        && theme::link(ui, label, theme::semibold(14.0), palette.secondary).clicked()
-    {
-        app.actions.push(Action::Open(Page::TopSongs));
-    }
-    ui.add_space(16.0);
-}
-
-fn top_tracks(app: &mut App, ui: &mut egui::Ui) {
-    let tracks = app.home.top_tracks.clone();
-    track_list(
-        app,
-        ui,
-        "Your top songs",
-        tracks,
-        10,
-        Some(Page::TopSongs),
-        Some("Show more top songs"),
-    );
-}
-
-fn recommendations(app: &mut App, ui: &mut egui::Ui) {
-    let tracks = app.home.recommendations.clone();
-    track_list(app, ui, "Recommended for you", tracks, 20, None, None);
 }
 
 #[cfg(test)]

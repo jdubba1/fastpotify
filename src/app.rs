@@ -1339,14 +1339,7 @@ impl App {
         self.home.requested = true;
         self.home.loaded_at = Some(Instant::now());
         self.home.recently_played = Loadable::Loading;
-        self.home.top_artists = Loadable::Loading;
-        self.home.top_tracks = Loadable::Loading;
         self.backend.api(ApiRequest::RecentlyPlayed);
-        self.backend.api(ApiRequest::TopArtists);
-        self.backend.api(ApiRequest::TopTracks {
-            offset: 0,
-            full: false,
-        });
         for term in DISCOVER_TERMS {
             self.home
                 .discover

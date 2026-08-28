@@ -612,20 +612,44 @@ fn contents(app: &mut App, ui: &mut egui::Ui) {
 
 /// The purple-to-blue Liked Songs tile.
 pub fn liked_cover(ui: &egui::Ui, rect: Rect, radius: f32) {
-    let top = egui::Color32::from_rgb(0x45, 0x0a, 0xf5);
-    let bottom = egui::Color32::from_rgb(0xc4, 0xef, 0xd9);
+    let top_left = egui::Color32::from_rgb(0x45, 0x0a, 0xf5);
+    let top_right = egui::Color32::from_rgb(0x6a, 0x3a, 0xe8);
+    let bottom_left = egui::Color32::from_rgb(0x8e, 0x9f, 0xe5);
+    let bottom_right = egui::Color32::from_rgb(0xc4, 0xef, 0xd9);
+    let color_at = |position: egui::Pos2| {
+        let x = ((position.x - rect.left()) / rect.width()).clamp(0.0, 1.0);
+        let y = ((position.y - rect.top()) / rect.height()).clamp(0.0, 1.0);
+        top_left
+            .lerp_to_gamma(top_right, x)
+            .lerp_to_gamma(bottom_left.lerp_to_gamma(bottom_right, x), y)
+    };
+
     let mut mesh = egui::Mesh::default();
-    mesh.colored_vertex(rect.left_top(), top);
-    mesh.colored_vertex(rect.right_top(), egui::Color32::from_rgb(0x6a, 0x3a, 0xe8));
-    mesh.colored_vertex(rect.right_bottom(), bottom);
-    mesh.colored_vertex(
-        rect.left_bottom(),
-        egui::Color32::from_rgb(0x8e, 0x9f, 0xe5),
-    );
-    mesh.add_triangle(0, 1, 2);
-    mesh.add_triangle(0, 2, 3);
+    mesh.colored_vertex(rect.center(), color_at(rect.center()));
+    let radius = radius.clamp(0.0, rect.width().min(rect.height()) / 2.0);
+    let corners = [
+        (pos2(rect.left() + radius, rect.top() + radius), 1.0),
+        (pos2(rect.right() - radius, rect.top() + radius), 1.5),
+        (pos2(rect.right() - radius, rect.bottom() - radius), 0.0),
+        (pos2(rect.left() + radius, rect.bottom() - radius), 0.5),
+    ];
+    for (center, start_turn) in corners {
+        for step in 0..=4 {
+            let angle = (start_turn + step as f32 / 8.0) * std::f32::consts::PI;
+            let position = center + Vec2::angled(angle) * radius;
+            mesh.colored_vertex(position, color_at(position));
+        }
+    }
+    let boundary_vertices = mesh.vertices.len() as u32 - 1;
+    for vertex in 1..=boundary_vertices {
+        let next = if vertex == boundary_vertices {
+            1
+        } else {
+            vertex + 1
+        };
+        mesh.add_triangle(0, vertex, next);
+    }
     let painter = ui.painter().with_clip_rect(rect);
-    let _ = radius;
     painter.add(egui::Shape::mesh(mesh));
     let size = rect.width() * 0.45;
     let icon_rect = Rect::from_center_size(rect.center(), Vec2::splat(size));
