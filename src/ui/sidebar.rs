@@ -140,6 +140,23 @@ fn contents(app: &mut App, ui: &mut egui::Ui) {
                 });
             if theme::icon_button(
                 ui,
+                Icon::Refresh,
+                17.0,
+                palette.secondary,
+                palette.text,
+                if app.library.playlists_refreshing {
+                    "Refreshing Your Library"
+                } else {
+                    "Refresh Your Library"
+                },
+            )
+            .clicked()
+                && !app.library.playlists_refreshing
+            {
+                app.actions.push(Action::RefreshLibrary);
+            }
+            if theme::icon_button(
+                ui,
                 Icon::Search,
                 17.0,
                 palette.secondary,

@@ -226,6 +226,7 @@ impl<T> CursorList<T> {
 pub struct Library {
     pub playlists: Loadable<Vec<Playlist>>,
     pub playlists_next: Option<u32>,
+    pub playlists_refreshing: bool,
     pub liked: PagedList<SavedTrack>,
     pub albums: PagedList<SavedAlbum>,
     pub artists: CursorList<Artist>,
@@ -506,6 +507,7 @@ pub enum Action {
     Transfer(String),
     /// Hand the account to a receiver found on the local network.
     ActivateReceiver(Box<crate::zeroconf::Receiver>),
+    RefreshLibrary,
     RefreshDevices,
     RefreshQueue,
     CopyLink(String),

@@ -1210,10 +1210,13 @@ impl App {
     // ---- loading ---------------------------------------------------------------
 
     fn load_playlists(&mut self) {
-        if self.library.playlists.is_loading() {
+        if self.library.playlists_refreshing || self.library.playlists.is_loading() {
             return;
         }
-        self.library.playlists = Loadable::Loading;
+        self.library.playlists_refreshing = true;
+        if self.library.playlists.needs_load() {
+            self.library.playlists = Loadable::Loading;
+        }
         self.library.playlists_next = None;
         self.backend.api(ApiRequest::MyPlaylists { offset: 0 });
     }
@@ -1814,6 +1817,8 @@ impl App {
                     self.library.playlists_next = has_more.then_some(offset + received);
                     if has_more {
                         self.load_more(Page::Home);
+                    } else {
+                        self.library.playlists_refreshing = false;
                     }
                     if let Some(playlists) = self.library.playlists.get() {
                         for playlist in playlists {
@@ -1822,8 +1827,13 @@ impl App {
                     }
                 }
                 Err(error) => {
+                    self.library.playlists_refreshing = false;
                     if offset == 0 {
-                        self.library.playlists = Loadable::Failed(error.to_string());
+                        if self.library.playlists.get().is_some() {
+                            self.toast_error(format!("Couldn't refresh playlists: {error}"));
+                        } else {
+                            self.library.playlists = Loadable::Failed(error.to_string());
+                        }
                     } else {
                         self.toast_error(format!("Couldn't load more playlists: {error}"));
                     }
@@ -3051,6 +3061,7 @@ impl App {
                     self.backend.send(Command::ActivateReceiver(receiver));
                 }
             }
+            Action::RefreshLibrary => self.load_playlists(),
             Action::RefreshDevices => {
                 self.devices_fetched_at = None;
                 self.refresh_devices();
