@@ -5,12 +5,33 @@ use egui::{Align, CornerRadius, Frame, Layout, Margin, Stroke, Vec2};
 use crate::api::models::pick_image;
 use crate::app::App;
 use crate::model::{Action, Dialog, Page};
-use crate::settings::{HomeLayout, ThemeChoice};
+use crate::settings::{HomeSettings, ThemeChoice};
 use crate::theme::{self, Icon, Palette};
 
 use super::widgets;
 
 const PLAYBACK_DIRTY_ID: &str = "playback-settings-dirty";
+
+fn shelf_controls(
+    ui: &mut egui::Ui,
+    palette: &Palette,
+    visible: &mut bool,
+    limit: &mut u8,
+    max: u8,
+) {
+    ui.horizontal(|ui| {
+        ui.spacing_mut().item_spacing.x = 6.0;
+        if theme::soft_button(ui, palette, None, "-", false).clicked() {
+            *limit = limit.saturating_sub(1).max(1);
+        }
+        theme::text(ui, limit.to_string(), theme::medium(13.5), palette.text);
+        if theme::soft_button(ui, palette, None, "+", false).clicked() {
+            *limit = limit.saturating_add(1).min(max);
+        }
+        ui.add_space(6.0);
+        widgets::switch(ui, palette, visible);
+    });
+}
 
 fn section(
     ui: &mut egui::Ui,
@@ -529,35 +550,162 @@ pub fn show(app: &mut App, ui: &mut egui::Ui) {
         );
     });
 
+    let home_before = app.settings.home;
     section(ui, &palette, "Home", |ui| {
         widgets::setting_row(
             ui,
             &palette,
-            "Layout",
-            "Focused keeps essentials and pinned playlists, trims recommendations, and makes fewer requests.",
+            "Presets",
+            "Starting points only. Every choice below remains independent.",
             |ui| {
                 ui.horizontal(|ui| {
                     ui.spacing_mut().item_spacing.x = 6.0;
-                    for layout in HomeLayout::ALL {
-                        if theme::soft_button(
-                            ui,
-                            &palette,
-                            None,
-                            layout.label(),
-                            app.settings.home_layout == layout,
-                        )
+                    let full = HomeSettings::default();
+                    if theme::soft_button(ui, &palette, None, "Full", app.settings.home == full)
                         .clicked()
-                            && app.settings.home_layout != layout
-                        {
-                            app.settings.home_layout = layout;
-                            app.actions.push(Action::Reload(Page::Home));
-                            changed = true;
-                        }
+                    {
+                        app.settings.home = full;
+                    }
+                    let focused = HomeSettings::focused();
+                    if theme::soft_button(
+                        ui,
+                        &palette,
+                        None,
+                        "Focused",
+                        app.settings.home == focused,
+                    )
+                    .clicked()
+                    {
+                        app.settings.home = focused;
                     }
                 });
             },
         );
+
+        widgets::setting_row(
+            ui,
+            &palette,
+            "Quick access",
+            "Show this row and set its total number of tiles.",
+            |ui| {
+                shelf_controls(
+                    ui,
+                    &palette,
+                    &mut app.settings.home.quick_access.visible,
+                    &mut app.settings.home.quick_access.limit,
+                    32,
+                );
+            },
+        );
+        for (label, description, enabled) in [
+            (
+                "Liked Songs",
+                "Include Liked Songs in Quick access.",
+                &mut app.settings.home.quick_access.liked_songs,
+            ),
+            (
+                "Discover Weekly",
+                "Include Spotify's weekly discovery playlist.",
+                &mut app.settings.home.quick_access.discover_weekly,
+            ),
+            (
+                "Release Radar",
+                "Include Spotify's new-release playlist.",
+                &mut app.settings.home.quick_access.release_radar,
+            ),
+            (
+                "Pinned playlists",
+                "Include sidebar pins in their pinned order.",
+                &mut app.settings.home.quick_access.pinned_playlists,
+            ),
+            (
+                "Library playlists",
+                "Fill remaining Quick access slots from your library.",
+                &mut app.settings.home.quick_access.library_playlists,
+            ),
+        ] {
+            widgets::setting_row(ui, &palette, label, description, |ui| {
+                widgets::switch(ui, &palette, enabled);
+            });
+        }
+
+        widgets::setting_row(
+            ui,
+            &palette,
+            "Made for you",
+            "Show this row and set its total number of playlists.",
+            |ui| {
+                shelf_controls(
+                    ui,
+                    &palette,
+                    &mut app.settings.home.made_for_you.visible,
+                    &mut app.settings.home.made_for_you.limit,
+                    24,
+                );
+            },
+        );
+        for (label, description, enabled) in [
+            (
+                "Daily Mixes",
+                "Include numbered Daily Mix 1 through 6 playlists.",
+                &mut app.settings.home.made_for_you.daily_mixes,
+            ),
+            (
+                "Daylist",
+                "Include your current daylist.",
+                &mut app.settings.home.made_for_you.daylist,
+            ),
+            (
+                "Discover Weekly in Made for you",
+                "Also place Discover Weekly in this row.",
+                &mut app.settings.home.made_for_you.discover_weekly,
+            ),
+            (
+                "Release Radar in Made for you",
+                "Also place Release Radar in this row.",
+                &mut app.settings.home.made_for_you.release_radar,
+            ),
+        ] {
+            widgets::setting_row(ui, &palette, label, description, |ui| {
+                widgets::switch(ui, &palette, enabled);
+            });
+        }
+
+        for (label, description, shelf, max) in [
+            (
+                "Recently played",
+                "Show the row and choose how many unique tracks it contains.",
+                &mut app.settings.home.recently_played,
+                50,
+            ),
+            (
+                "Top artists",
+                "Show the medium-term artist ranking and choose its size.",
+                &mut app.settings.home.top_artists,
+                20,
+            ),
+            (
+                "Top songs",
+                "Show the short-term song ranking and choose its size.",
+                &mut app.settings.home.top_songs,
+                20,
+            ),
+            (
+                "Recommendations",
+                "Show Spotify recommendations seeded from your top songs.",
+                &mut app.settings.home.recommendations,
+                20,
+            ),
+        ] {
+            widgets::setting_row(ui, &palette, label, description, |ui| {
+                shelf_controls(ui, &palette, &mut shelf.visible, &mut shelf.limit, max);
+            });
+        }
     });
+    if app.settings.home != home_before {
+        app.actions.push(Action::Reload(Page::Home));
+        changed = true;
+    }
 
     section(ui, &palette, "Winamp skins", |ui| {
         widgets::setting_row(

@@ -16,21 +16,141 @@ pub enum ThemeChoice {
     System,
 }
 
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "lowercase")]
-pub enum HomeLayout {
-    #[default]
-    Full,
-    Focused,
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(default)]
+pub struct HomeShelfSettings {
+    pub visible: bool,
+    pub limit: u8,
 }
 
-impl HomeLayout {
-    pub const ALL: [HomeLayout; 2] = [Self::Full, Self::Focused];
+impl HomeShelfSettings {
+    const fn new(visible: bool, limit: u8) -> Self {
+        Self { visible, limit }
+    }
+}
 
-    pub fn label(self) -> &'static str {
-        match self {
-            Self::Full => "Full",
-            Self::Focused => "Focused",
+impl Default for HomeShelfSettings {
+    fn default() -> Self {
+        Self::new(true, 10)
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(default)]
+pub struct QuickAccessSettings {
+    pub visible: bool,
+    pub limit: u8,
+    pub liked_songs: bool,
+    pub discover_weekly: bool,
+    pub release_radar: bool,
+    pub pinned_playlists: bool,
+    pub library_playlists: bool,
+}
+
+impl Default for QuickAccessSettings {
+    fn default() -> Self {
+        Self {
+            visible: true,
+            limit: 8,
+            liked_songs: true,
+            discover_weekly: false,
+            release_radar: false,
+            pinned_playlists: false,
+            library_playlists: true,
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(default)]
+pub struct MadeForYouSettings {
+    pub visible: bool,
+    pub limit: u8,
+    pub daily_mixes: bool,
+    pub daylist: bool,
+    pub discover_weekly: bool,
+    pub release_radar: bool,
+}
+
+impl Default for MadeForYouSettings {
+    fn default() -> Self {
+        Self {
+            visible: true,
+            limit: 24,
+            daily_mixes: true,
+            daylist: true,
+            discover_weekly: true,
+            release_radar: true,
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(default)]
+pub struct HomeSettings {
+    pub quick_access: QuickAccessSettings,
+    pub made_for_you: MadeForYouSettings,
+    pub recently_played: HomeShelfSettings,
+    pub top_artists: HomeShelfSettings,
+    pub top_songs: HomeShelfSettings,
+    pub recommendations: HomeShelfSettings,
+}
+
+impl HomeSettings {
+    pub const fn focused() -> Self {
+        Self {
+            quick_access: QuickAccessSettings {
+                visible: true,
+                limit: 12,
+                liked_songs: true,
+                discover_weekly: true,
+                release_radar: true,
+                pinned_playlists: true,
+                library_playlists: false,
+            },
+            made_for_you: MadeForYouSettings {
+                visible: true,
+                limit: 7,
+                daily_mixes: true,
+                daylist: true,
+                discover_weekly: false,
+                release_radar: false,
+            },
+            recently_played: HomeShelfSettings::new(true, 7),
+            top_artists: HomeShelfSettings::new(false, 10),
+            top_songs: HomeShelfSettings::new(false, 10),
+            recommendations: HomeShelfSettings::new(false, 20),
+        }
+    }
+
+    pub fn wants_discover_term(self, term: &str) -> bool {
+        let quick_access = self.quick_access.visible && self.quick_access.limit > 0;
+        let made_for_you = self.made_for_you.visible && self.made_for_you.limit > 0;
+        match term {
+            "Discover Weekly" => {
+                (quick_access && self.quick_access.discover_weekly)
+                    || (made_for_you && self.made_for_you.discover_weekly)
+            }
+            "Release Radar" => {
+                (quick_access && self.quick_access.release_radar)
+                    || (made_for_you && self.made_for_you.release_radar)
+            }
+            "Daily Mix" => made_for_you && self.made_for_you.daily_mixes,
+            "daylist" => made_for_you && self.made_for_you.daylist,
+            _ => false,
+        }
+    }
+}
+
+impl Default for HomeSettings {
+    fn default() -> Self {
+        Self {
+            quick_access: QuickAccessSettings::default(),
+            made_for_you: MadeForYouSettings::default(),
+            recently_played: HomeShelfSettings::new(true, 16),
+            top_artists: HomeShelfSettings::new(true, 20),
+            top_songs: HomeShelfSettings::new(true, 10),
+            recommendations: HomeShelfSettings::new(true, 20),
         }
     }
 }
@@ -99,7 +219,7 @@ pub struct Settings {
     pub audio_cache: bool,
     pub audio_cache_mb: u64,
     pub theme: ThemeChoice,
-    pub home_layout: HomeLayout,
+    pub home: HomeSettings,
     /// Tint the interface with the colour of the playing album's art.
     pub accent_from_art: bool,
     /// Last local volume, 0..=65535.
@@ -198,7 +318,7 @@ impl Default for Settings {
             audio_cache: true,
             audio_cache_mb: 1024,
             theme: ThemeChoice::Dark,
-            home_layout: HomeLayout::Full,
+            home: HomeSettings::default(),
             accent_from_art: true,
             volume: (u16::MAX as u32 * 70 / 100) as u16,
             sidebar_visible: true,
@@ -397,20 +517,29 @@ mod tests {
     }
 
     #[test]
-    fn older_settings_keep_the_full_home_layout() {
+    fn older_settings_keep_the_full_home() {
         let settings: Settings = serde_json::from_str("{}").unwrap();
-        assert_eq!(settings.home_layout, super::HomeLayout::Full);
+        assert_eq!(settings.home, super::HomeSettings::default());
     }
 
     #[test]
-    fn focused_home_layout_round_trips() {
+    fn granular_home_settings_round_trip() {
         let settings = Settings {
-            home_layout: super::HomeLayout::Focused,
+            home: super::HomeSettings::focused(),
             ..Settings::default()
         };
         let json = serde_json::to_string(&settings).unwrap();
         let restored: Settings = serde_json::from_str(&json).unwrap();
-        assert_eq!(restored.home_layout, super::HomeLayout::Focused);
+        assert_eq!(restored.home, super::HomeSettings::focused());
+    }
+
+    #[test]
+    fn partial_home_settings_keep_defaults() {
+        let settings: Settings =
+            serde_json::from_str(r#"{"home":{"recently_played":{"limit":7}}}"#).unwrap();
+        assert!(settings.home.recently_played.visible);
+        assert_eq!(settings.home.recently_played.limit, 7);
+        assert_eq!(settings.home.top_artists.limit, 20);
     }
 
     #[test]

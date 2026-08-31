@@ -52,7 +52,7 @@ main fields are:
 | `audio_backend` | platform | `pulseaudio` or `rodio` on Linux |
 | `audio_cache_mb` | `1024` | On-disk audio cache budget |
 | `theme` | `dark` | `dark`, `kintsugi`, `gruvbox`, `everforest`, `light`, or `system` |
-| `home_layout` | `full` | `full` for every shelf, or `focused` for essentials and pins |
+| `home` | full layout | Nested controls for each Home row, limit, and playlist source |
 | `accent_from_art` | `true` | Tint pages with album art |
 | `sidebar_compact` | `false` | Names only in the library sidebar, no covers |
 | `tracklist_compact` | `false` | One-line track rows without covers |
@@ -80,6 +80,37 @@ main fields are:
 | `keep_playing_in_background` | `true` | Close to tray |
 | `check_for_updates` | `true` | Ask GitHub once a day for a newer release |
 | `web_client_id` | none | Optional personal Spotify app id used alongside shared coverage |
+
+Home is deliberately exhaustive. Each row has `visible` and `limit`; Quick
+access and Made for you also expose their available sources. For example:
+
+```json
+{
+  "home": {
+    "quick_access": {
+      "visible": true,
+      "limit": 12,
+      "liked_songs": true,
+      "discover_weekly": true,
+      "release_radar": true,
+      "pinned_playlists": true,
+      "library_playlists": false
+    },
+    "made_for_you": {
+      "visible": true,
+      "limit": 7,
+      "daily_mixes": true,
+      "daylist": true,
+      "discover_weekly": false,
+      "release_radar": false
+    },
+    "recently_played": { "visible": true, "limit": 7 },
+    "top_artists": { "visible": false, "limit": 10 },
+    "top_songs": { "visible": false, "limit": 10 },
+    "recommendations": { "visible": false, "limit": 20 }
+  }
+}
+```
 
 ## Command line
 

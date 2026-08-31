@@ -4,8 +4,7 @@ use egui::{CornerRadius, Rect, Sense, Vec2, pos2, vec2};
 
 use crate::api::models::{PlayableItem, Playlist, pick_image};
 use crate::app::App;
-use crate::model::{Action, DISCOVER_TERMS, Loadable, Page, RowContext};
-use crate::settings::HomeLayout;
+use crate::model::{Action, Loadable, Page, RowContext};
 use crate::theme::{self, Icon};
 
 use super::widgets::{self, TrackRow};
@@ -15,14 +14,23 @@ pub fn show(app: &mut App, ui: &mut egui::Ui) {
     ui.add_space(6.0);
     theme::text(ui, crate::util::greeting(), theme::bold(30.0), palette.text);
     ui.add_space(12.0);
-    quick_access(app, ui);
-    ui.add_space(16.0);
-
-    made_for_you(app, ui);
-    recently_played(app, ui);
-    if app.settings.home_layout == HomeLayout::Full {
+    if app.settings.home.quick_access.visible && app.settings.home.quick_access.limit > 0 {
+        quick_access(app, ui);
+        ui.add_space(16.0);
+    }
+    if app.settings.home.made_for_you.visible && app.settings.home.made_for_you.limit > 0 {
+        made_for_you(app, ui);
+    }
+    if app.settings.home.recently_played.visible && app.settings.home.recently_played.limit > 0 {
+        recently_played(app, ui);
+    }
+    if app.settings.home.top_artists.visible && app.settings.home.top_artists.limit > 0 {
         top_artists(app, ui);
+    }
+    if app.settings.home.top_songs.visible && app.settings.home.top_songs.limit > 0 {
         top_tracks(app, ui);
+    }
+    if app.settings.home.recommendations.visible && app.settings.home.recommendations.limit > 0 {
         recommendations(app, ui);
     }
 }
@@ -37,48 +45,64 @@ struct Tile {
 
 fn quick_access(app: &mut App, ui: &mut egui::Ui) {
     let palette = app.palette;
-    let mut tiles: Vec<Tile> = vec![Tile {
-        image: None,
-        name: "Liked Songs".to_string(),
-        page: Page::LikedSongs,
-        uri: app
-            .user
-            .as_ref()
-            .map(|user| format!("spotify:user:{}:collection", user.id)),
-        liked: true,
-    }];
-    match app.settings.home_layout {
-        HomeLayout::Full => {
-            if let Some(playlists) = app.library.playlists.get() {
-                for playlist in playlists.iter().take(7) {
-                    tiles.push(playlist_tile(playlist));
-                }
+    let settings = app.settings.home.quick_access;
+    let mut tiles: Vec<Tile> = Vec::new();
+    if settings.liked_songs {
+        tiles.push(Tile {
+            image: None,
+            name: "Liked Songs".to_string(),
+            page: Page::LikedSongs,
+            uri: app
+                .user
+                .as_ref()
+                .map(|user| format!("spotify:user:{}:collection", user.id)),
+            liked: true,
+        });
+    }
+    for (name, enabled) in [
+        ("Discover Weekly", settings.discover_weekly),
+        ("Release Radar", settings.release_radar),
+    ] {
+        if enabled
+            && let Some(playlist) = discovered_playlists(app, name).and_then(|playlists| {
+                playlists
+                    .iter()
+                    .find(|playlist| playlist.name.eq_ignore_ascii_case(name))
+            })
+        {
+            tiles.push(playlist_tile(playlist));
+        }
+    }
+    if settings.pinned_playlists
+        && let Some(playlists) = app.library.playlists.get()
+    {
+        for uri in &app.settings.pinned_contexts {
+            if tiles
+                .iter()
+                .any(|tile| tile.uri.as_deref() == Some(uri.as_str()))
+            {
+                continue;
+            }
+            if let Some(playlist) = playlists.iter().find(|playlist| playlist.uri == *uri) {
+                tiles.push(playlist_tile(playlist));
             }
         }
-        HomeLayout::Focused => {
-            for name in ["Discover Weekly", "Release Radar"] {
-                if let Some(playlist) = discovered_playlists(app, name).and_then(|playlists| {
-                    playlists
-                        .iter()
-                        .find(|playlist| playlist.name.eq_ignore_ascii_case(name))
-                }) {
-                    tiles.push(playlist_tile(playlist));
-                }
-            }
-            if let Some(playlists) = app.library.playlists.get() {
-                for uri in &app.settings.pinned_contexts {
-                    if tiles
-                        .iter()
-                        .any(|tile| tile.uri.as_deref() == Some(uri.as_str()))
-                    {
-                        continue;
-                    }
-                    if let Some(playlist) = playlists.iter().find(|playlist| playlist.uri == *uri) {
-                        tiles.push(playlist_tile(playlist));
-                    }
-                }
+    }
+    if settings.library_playlists
+        && let Some(playlists) = app.library.playlists.get()
+    {
+        for playlist in playlists {
+            if !tiles
+                .iter()
+                .any(|tile| tile.uri.as_deref() == Some(playlist.uri.as_str()))
+            {
+                tiles.push(playlist_tile(playlist));
             }
         }
+    }
+    tiles.truncate(settings.limit as usize);
+    if tiles.is_empty() {
+        return;
     }
     let available = ui.available_width();
     let columns = ((available / 300.0).floor() as usize).clamp(2, 4);
@@ -198,68 +222,67 @@ fn daily_mix_number(name: &str) -> Option<u8> {
     (1..=6).contains(&number).then_some(number)
 }
 
+fn push_unique_playlist(playlists: &mut Vec<Playlist>, playlist: &Playlist) {
+    let duplicate = playlists.iter().any(|existing| {
+        existing.id == playlist.id || existing.name.eq_ignore_ascii_case(&playlist.name)
+    });
+    if !duplicate {
+        playlists.push(playlist.clone());
+    }
+}
+
 fn made_for_you(app: &mut App, ui: &mut egui::Ui) {
     let palette = app.palette;
-    let (playlists, loading, failed) = match app.settings.home_layout {
-        HomeLayout::Full => {
-            let mut playlists: Vec<Playlist> = Vec::new();
-            let mut loading = false;
-            let mut failed = false;
-            for term in DISCOVER_TERMS {
-                match app.home.discover.get(*term) {
-                    Some(Loadable::Loaded(list)) => {
-                        for playlist in list {
-                            let duplicate = playlists.iter().any(|existing| {
-                                existing.id == playlist.id
-                                    || existing.name.eq_ignore_ascii_case(&playlist.name)
-                            });
-                            if !duplicate {
-                                playlists.push(playlist.clone());
-                            }
-                        }
-                    }
-                    Some(Loadable::Loading) => loading = true,
-                    Some(Loadable::Failed(_)) => failed = true,
-                    _ => {}
+    let settings = app.settings.home.made_for_you;
+    let sources = [
+        ("Daily Mix", settings.daily_mixes),
+        ("daylist", settings.daylist),
+        ("Discover Weekly", settings.discover_weekly),
+        ("Release Radar", settings.release_radar),
+    ];
+    let mut playlists = Vec::new();
+    let mut loading = false;
+    let mut failed = false;
+    for (term, enabled) in sources {
+        if !enabled {
+            continue;
+        }
+        let Some(result) = app.home.discover.get(term) else {
+            continue;
+        };
+        match result {
+            Loadable::Loading | Loadable::NotLoaded => loading = true,
+            Loadable::Failed(_) => failed = true,
+            Loadable::Loaded(list) if term == "Daily Mix" => {
+                let mut mixes: Vec<_> = list
+                    .iter()
+                    .filter_map(|playlist| Some((daily_mix_number(&playlist.name)?, playlist)))
+                    .collect();
+                mixes.sort_by_key(|(number, _)| *number);
+                mixes.dedup_by_key(|(number, _)| *number);
+                for (_, playlist) in mixes {
+                    push_unique_playlist(&mut playlists, playlist);
                 }
             }
-            (playlists, loading, failed)
-        }
-        HomeLayout::Focused => {
-            let mut loading = false;
-            let mut failed = false;
-            for term in ["Daily Mix", "daylist"] {
-                match app.home.discover.get(term) {
-                    Some(Loadable::Loading) => loading = true,
-                    Some(Loadable::Failed(_)) => failed = true,
-                    _ => {}
+            Loadable::Loaded(list) if term == "daylist" => {
+                if let Some(playlist) = list
+                    .iter()
+                    .find(|playlist| playlist.name.to_lowercase().contains("daylist"))
+                {
+                    push_unique_playlist(&mut playlists, playlist);
                 }
             }
-            let mut mixes: Vec<(u8, Playlist)> = discovered_playlists(app, "Daily Mix")
-                .into_iter()
-                .flatten()
-                .filter_map(|playlist| Some((daily_mix_number(&playlist.name)?, playlist.clone())))
-                .collect();
-            mixes.sort_by_key(|(number, _)| *number);
-            mixes.dedup_by_key(|(number, _)| *number);
-            let mut playlists: Vec<Playlist> = mixes
-                .into_iter()
-                .take(6)
-                .map(|(_, playlist)| playlist)
-                .collect();
-            if let Some(daylist) = discovered_playlists(app, "daylist")
-                .and_then(|playlists| {
-                    playlists
-                        .iter()
-                        .find(|playlist| playlist.name.to_lowercase().contains("daylist"))
-                })
-                .cloned()
-            {
-                playlists.push(daylist);
+            Loadable::Loaded(list) => {
+                if let Some(playlist) = list
+                    .iter()
+                    .find(|playlist| playlist.name.eq_ignore_ascii_case(term))
+                {
+                    push_unique_playlist(&mut playlists, playlist);
+                }
             }
-            (playlists, loading, failed)
         }
-    };
+    }
+    playlists.truncate(settings.limit as usize);
     if playlists.is_empty() && !loading && !failed {
         return;
     }
@@ -327,10 +350,7 @@ fn recently_played(app: &mut App, ui: &mut egui::Ui) {
                 .as_ref()
                 .is_some_and(|id| seen.insert(id.clone()))
         })
-        .take(match app.settings.home_layout {
-            HomeLayout::Full => 16,
-            HomeLayout::Focused => 7,
-        })
+        .take(app.settings.home.recently_played.limit as usize)
         .collect();
     if tracks.is_empty() {
         return;
@@ -385,7 +405,10 @@ fn top_artists(app: &mut App, ui: &mut egui::Ui) {
         return;
     }
     widgets::shelf(ui, &palette, "top-artists", "Your top artists", |ui| {
-        for artist in &artists {
+        for artist in artists
+            .iter()
+            .take(app.settings.home.top_artists.limit as usize)
+        {
             let card = widgets::card(
                 ui,
                 app,
@@ -493,7 +516,7 @@ fn top_tracks(app: &mut App, ui: &mut egui::Ui) {
         ui,
         "Your top songs",
         tracks,
-        10,
+        app.settings.home.top_songs.limit as usize,
         Some(Page::TopSongs),
         Some("Show more top songs"),
     );
@@ -501,7 +524,15 @@ fn top_tracks(app: &mut App, ui: &mut egui::Ui) {
 
 fn recommendations(app: &mut App, ui: &mut egui::Ui) {
     let tracks = app.home.recommendations.clone();
-    track_list(app, ui, "Recommended for you", tracks, 20, None, None);
+    track_list(
+        app,
+        ui,
+        "Recommended for you",
+        tracks,
+        app.settings.home.recommendations.limit as usize,
+        None,
+        None,
+    );
 }
 
 #[cfg(test)]
@@ -509,7 +540,7 @@ mod tests {
     use super::daily_mix_number;
 
     #[test]
-    fn focused_home_only_accepts_numbered_daily_mixes_one_through_six() {
+    fn daily_mix_source_only_accepts_numbered_mixes_one_through_six() {
         assert_eq!(daily_mix_number("Daily Mix 1"), Some(1));
         assert_eq!(daily_mix_number("Daily Mix 6"), Some(6));
         assert_eq!(daily_mix_number("Daily Mix 7"), None);

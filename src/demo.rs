@@ -646,7 +646,7 @@ pub fn apply_flags(app: &mut App, page: Option<&str>, show: Option<&str>) {
             }
             "focus" => app.settings.sidebar_visible = false,
             "focused-home" => {
-                app.settings.home_layout = crate::settings::HomeLayout::Focused;
+                app.settings.home = crate::settings::HomeSettings::focused();
             }
             // A cold start: no device is playing anything, and all the app
             // has is the song the last session ended on.

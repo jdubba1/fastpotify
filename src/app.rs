@@ -20,7 +20,7 @@ use crate::model::QueueTab;
 use crate::model::*;
 use crate::paths::AppDirs;
 use crate::player::{EngineConfig, LoadSpec, LocalState, Playback, PlayerCommand, RepeatMode};
-use crate::settings::{HomeLayout, SessionState, Settings, ThemeChoice};
+use crate::settings::{SessionState, Settings, ThemeChoice};
 use crate::single_instance::ControlCommand;
 use crate::theme::{self, Palette};
 use crate::tray::{TrayCommand, TrayService};
@@ -2222,23 +2222,30 @@ impl App {
         self.home.loaded_at = Some(Instant::now());
         self.home.generation += 1;
         let generation = self.home.generation;
-        if self.home.recently_played.get().is_none() {
-            self.home.recently_played = Loadable::Loading;
+        let home = self.settings.home;
+        if home.recently_played.visible && home.recently_played.limit > 0 {
+            if self.home.recently_played.get().is_none() {
+                self.home.recently_played = Loadable::Loading;
+            }
+            self.backend.api(ApiRequest::RecentlyPlayed {
+                who: RecentsFor::Home,
+                generation,
+                before: None,
+                limit: HOME_RECENTS,
+            });
         }
-        self.backend.api(ApiRequest::RecentlyPlayed {
-            who: RecentsFor::Home,
-            generation,
-            before: None,
-            limit: HOME_RECENTS,
-        });
-        if self.settings.home_layout == HomeLayout::Full {
+        if home.top_artists.visible && home.top_artists.limit > 0 {
             if self.home.top_artists.get().is_none() {
                 self.home.top_artists = Loadable::Loading;
             }
+            self.backend.api(ApiRequest::TopArtists { generation });
+        }
+        if (home.top_songs.visible && home.top_songs.limit > 0)
+            || (home.recommendations.visible && home.recommendations.limit > 0)
+        {
             if self.home.top_tracks.get().is_none() {
                 self.home.top_tracks = Loadable::Loading;
             }
-            self.backend.api(ApiRequest::TopArtists { generation });
             self.backend.api(ApiRequest::TopTracks {
                 offset: 0,
                 full: false,
@@ -2247,6 +2254,9 @@ impl App {
         }
         self.home.discover_pending.clear();
         for term in DISCOVER_TERMS {
+            if !home.wants_discover_term(term) {
+                continue;
+            }
             self.home
                 .discover_pending
                 .insert((*term).to_string(), Loadable::Loading);
@@ -3026,7 +3036,10 @@ impl App {
                         .filter_map(|track| track.id.clone())
                         .take(5)
                         .collect();
-                    if !seeds.is_empty() {
+                    if self.settings.home.recommendations.visible
+                        && self.settings.home.recommendations.limit > 0
+                        && !seeds.is_empty()
+                    {
                         if self.home.recommendations.get().is_none() {
                             self.home.recommendations = Loadable::Loading;
                         }
@@ -3088,12 +3101,12 @@ impl App {
                 self.home
                     .discover_pending
                     .insert(term, Loadable::from_result(filtered));
-                let complete = DISCOVER_TERMS.iter().all(|term| {
-                    self.home
+                let complete = !self.home.discover_pending.is_empty()
+                    && self
+                        .home
                         .discover_pending
-                        .get(*term)
-                        .is_some_and(|result| !result.is_loading())
-                });
+                        .values()
+                        .all(|result| !result.is_loading());
                 if complete {
                     self.home.discover = std::mem::take(&mut self.home.discover_pending);
                 }
