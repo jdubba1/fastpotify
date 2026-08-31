@@ -4,8 +4,8 @@ use egui::{Align, CornerRadius, Frame, Layout, Margin, Stroke, Vec2};
 
 use crate::api::models::pick_image;
 use crate::app::App;
-use crate::model::{Action, Dialog};
-use crate::settings::ThemeChoice;
+use crate::model::{Action, Dialog, Page};
+use crate::settings::{HomeLayout, ThemeChoice};
 use crate::theme::{self, Icon, Palette};
 
 use super::widgets;
@@ -528,6 +528,36 @@ pub fn show(app: &mut App, ui: &mut egui::Ui) {
                         app.settings.zoom = zoom;
                         ui.ctx().set_zoom_factor(zoom);
                         app.mark_settings_dirty();
+                    }
+                });
+            },
+        );
+    });
+
+    section(ui, &palette, "Home", |ui| {
+        widgets::setting_row(
+            ui,
+            &palette,
+            "Layout",
+            "Focused keeps essentials and pinned playlists, trims recommendations, and makes fewer requests.",
+            |ui| {
+                ui.horizontal(|ui| {
+                    ui.spacing_mut().item_spacing.x = 6.0;
+                    for layout in HomeLayout::ALL {
+                        if theme::soft_button(
+                            ui,
+                            &palette,
+                            None,
+                            layout.label(),
+                            app.settings.home_layout == layout,
+                        )
+                        .clicked()
+                            && app.settings.home_layout != layout
+                        {
+                            app.settings.home_layout = layout;
+                            app.actions.push(Action::Reload(Page::Home));
+                            changed = true;
+                        }
                     }
                 });
             },

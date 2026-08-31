@@ -107,6 +107,13 @@ const PLAYLISTS: &[&str] = &[
     "Deep work",
     "Road trip",
     "Kitchen jams",
+    "Daily Mix 1",
+    "Daily Mix 2",
+    "Daily Mix 3",
+    "Daily Mix 4",
+    "Daily Mix 5",
+    "Daily Mix 6",
+    "daylist",
 ];
 
 fn artist_ref(index: usize) -> ArtistRef {
@@ -626,6 +633,9 @@ pub fn apply_flags(app: &mut App, page: Option<&str>, show: Option<&str>) {
                 app.actions.push(Action::SettingsChanged);
             }
             "focus" => app.settings.sidebar_visible = false,
+            "focused-home" => {
+                app.settings.home_layout = crate::settings::HomeLayout::Focused;
+            }
             // A cold start: no device is playing anything, and all the app
             // has is the song the last session ended on.
             "resume" => {

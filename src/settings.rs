@@ -13,6 +13,25 @@ pub enum ThemeChoice {
     System,
 }
 
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum HomeLayout {
+    #[default]
+    Full,
+    Focused,
+}
+
+impl HomeLayout {
+    pub const ALL: [HomeLayout; 2] = [Self::Full, Self::Focused];
+
+    pub fn label(self) -> &'static str {
+        match self {
+            Self::Full => "Full",
+            Self::Focused => "Focused",
+        }
+    }
+}
+
 /// Mini-player visualizer mode.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
@@ -67,6 +86,7 @@ pub struct Settings {
     pub audio_cache: bool,
     pub audio_cache_mb: u64,
     pub theme: ThemeChoice,
+    pub home_layout: HomeLayout,
     /// Tint the interface with the colour of the playing album's art.
     pub accent_from_art: bool,
     /// Last local volume, 0..=65535.
@@ -165,6 +185,7 @@ impl Default for Settings {
             audio_cache: true,
             audio_cache_mb: 1024,
             theme: ThemeChoice::Dark,
+            home_layout: HomeLayout::Full,
             accent_from_art: true,
             volume: (u16::MAX as u32 * 70 / 100) as u16,
             sidebar_visible: true,
@@ -360,6 +381,23 @@ mod tests {
         let json = serde_json::to_string(&settings).unwrap();
         let restored: Settings = serde_json::from_str(&json).unwrap();
         assert!(restored.tracklist_compact);
+    }
+
+    #[test]
+    fn older_settings_keep_the_full_home_layout() {
+        let settings: Settings = serde_json::from_str("{}").unwrap();
+        assert_eq!(settings.home_layout, super::HomeLayout::Full);
+    }
+
+    #[test]
+    fn focused_home_layout_round_trips() {
+        let settings = Settings {
+            home_layout: super::HomeLayout::Focused,
+            ..Settings::default()
+        };
+        let json = serde_json::to_string(&settings).unwrap();
+        let restored: Settings = serde_json::from_str(&json).unwrap();
+        assert_eq!(restored.home_layout, super::HomeLayout::Focused);
     }
 }
 

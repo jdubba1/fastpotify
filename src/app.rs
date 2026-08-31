@@ -20,7 +20,7 @@ use crate::model::QueueTab;
 use crate::model::*;
 use crate::paths::AppDirs;
 use crate::player::{EngineConfig, LoadSpec, LocalState, Playback, PlayerCommand, RepeatMode};
-use crate::settings::{SessionState, Settings, ThemeChoice};
+use crate::settings::{HomeLayout, SessionState, Settings, ThemeChoice};
 use crate::single_instance::ControlCommand;
 use crate::theme::{self, Palette};
 use crate::tray::{TrayCommand, TrayService};
@@ -2217,24 +2217,26 @@ impl App {
         if self.home.recently_played.get().is_none() {
             self.home.recently_played = Loadable::Loading;
         }
-        if self.home.top_artists.get().is_none() {
-            self.home.top_artists = Loadable::Loading;
-        }
-        if self.home.top_tracks.get().is_none() {
-            self.home.top_tracks = Loadable::Loading;
-        }
         self.backend.api(ApiRequest::RecentlyPlayed {
             who: RecentsFor::Home,
             generation,
             before: None,
             limit: HOME_RECENTS,
         });
-        self.backend.api(ApiRequest::TopArtists { generation });
-        self.backend.api(ApiRequest::TopTracks {
-            offset: 0,
-            full: false,
-            generation,
-        });
+        if self.settings.home_layout == HomeLayout::Full {
+            if self.home.top_artists.get().is_none() {
+                self.home.top_artists = Loadable::Loading;
+            }
+            if self.home.top_tracks.get().is_none() {
+                self.home.top_tracks = Loadable::Loading;
+            }
+            self.backend.api(ApiRequest::TopArtists { generation });
+            self.backend.api(ApiRequest::TopTracks {
+                offset: 0,
+                full: false,
+                generation,
+            });
+        }
         self.home.discover_pending.clear();
         for term in DISCOVER_TERMS {
             self.home
