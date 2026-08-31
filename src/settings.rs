@@ -9,6 +9,9 @@ use serde::{Deserialize, Serialize};
 pub enum ThemeChoice {
     #[default]
     Dark,
+    Kintsugi,
+    Gruvbox,
+    Everforest,
     Light,
     System,
 }
@@ -54,11 +57,21 @@ impl VisMode {
 }
 
 impl ThemeChoice {
-    pub const ALL: [ThemeChoice; 3] = [Self::Dark, Self::Light, Self::System];
+    pub const ALL: [ThemeChoice; 6] = [
+        Self::Dark,
+        Self::Kintsugi,
+        Self::Gruvbox,
+        Self::Everforest,
+        Self::Light,
+        Self::System,
+    ];
 
     pub fn label(self) -> &'static str {
         match self {
             Self::Dark => "Dark",
+            Self::Kintsugi => "Kintsugi Dark",
+            Self::Gruvbox => "Gruvbox Dark",
+            Self::Everforest => "Everforest Dark",
             Self::Light => "Light",
             Self::System => "Follow system",
         }
@@ -398,6 +411,19 @@ mod tests {
         let json = serde_json::to_string(&settings).unwrap();
         let restored: Settings = serde_json::from_str(&json).unwrap();
         assert_eq!(restored.home_layout, super::HomeLayout::Focused);
+    }
+
+    #[test]
+    fn every_theme_choice_round_trips() {
+        for theme in super::ThemeChoice::ALL {
+            let settings = Settings {
+                theme,
+                ..Settings::default()
+            };
+            let json = serde_json::to_string(&settings).unwrap();
+            let restored: Settings = serde_json::from_str(&json).unwrap();
+            assert_eq!(restored.theme, theme);
+        }
     }
 }
 

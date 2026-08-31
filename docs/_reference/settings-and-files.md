@@ -51,7 +51,7 @@ main fields are:
 | `gapless` | `true` | Gapless playback |
 | `audio_backend` | platform | `pulseaudio` or `rodio` on Linux |
 | `audio_cache_mb` | `1024` | On-disk audio cache budget |
-| `theme` | `dark` | `dark`, `light`, or `system` |
+| `theme` | `dark` | `dark`, `kintsugi`, `gruvbox`, `everforest`, `light`, or `system` |
 | `home_layout` | `full` | `full` for every shelf, or `focused` for essentials and pins |
 | `accent_from_art` | `true` | Tint pages with album art |
 | `sidebar_compact` | `false` | Names only in the library sidebar, no covers |
@@ -103,7 +103,8 @@ settings.
 `--demo-page` opens a page, such as `home`, `playlist:pl1`, or `artist:art0`,
 and `--demo-show` adds surfaces on top of it: a comma separated list of
 `queue`, `devices`, `shortcuts`, `premium`, `create`, `light`, `focus`, `winamp`,
-`playlist`, `eq`, `eq-shade`, `compact`, and `focused-home`.
+`playlist`, `eq`, `eq-shade`, `compact`, `focused-home`, `kintsugi`, `gruvbox`,
+and `everforest`.
 
 `--demo-shot <PATH>` writes the window to a PNG and exits, which is how the
 screenshots in these pages are made:

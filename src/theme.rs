@@ -72,6 +72,72 @@ impl Palette {
         }
     }
 
+    pub fn kintsugi() -> Self {
+        Self {
+            dark: true,
+            window: Color32::from_rgb(0x13, 0x13, 0x14),
+            panel: Color32::from_rgb(0x1a, 0x1a, 0x1d),
+            surface: Color32::from_rgb(0x20, 0x20, 0x1f),
+            surface_hover: Color32::from_rgb(0x2c, 0x2c, 0x29),
+            surface_active: Color32::from_rgb(0x3e, 0x3b, 0x2c),
+            outline: Color32::from_rgb(0x33, 0x35, 0x2d),
+            text: Color32::from_rgb(0xca, 0xca, 0xc2),
+            secondary: Color32::from_rgb(0x9b, 0x9b, 0x92),
+            dim: Color32::from_rgb(0x75, 0x71, 0x5e),
+            accent: Color32::from_rgb(0xd4, 0xa9, 0x43),
+            accent_hover: Color32::from_rgb(0xeb, 0xcb, 0x8b),
+            on_accent: Color32::from_rgb(0x13, 0x13, 0x14),
+            danger: Color32::from_rgb(0xb3, 0x8f, 0x8f),
+            warning: Color32::from_rgb(0xeb, 0xcb, 0x8b),
+            overlay: Color32::from_rgb(0x20, 0x20, 0x1f),
+            shadow: Color32::from_black_alpha(150),
+        }
+    }
+
+    pub fn gruvbox() -> Self {
+        Self {
+            dark: true,
+            window: Color32::from_rgb(0x1d, 0x20, 0x21),
+            panel: Color32::from_rgb(0x28, 0x28, 0x28),
+            surface: Color32::from_rgb(0x32, 0x30, 0x2f),
+            surface_hover: Color32::from_rgb(0x3c, 0x38, 0x36),
+            surface_active: Color32::from_rgb(0x50, 0x49, 0x45),
+            outline: Color32::from_rgb(0x50, 0x49, 0x45),
+            text: Color32::from_rgb(0xeb, 0xdb, 0xb2),
+            secondary: Color32::from_rgb(0xbd, 0xae, 0x93),
+            dim: Color32::from_rgb(0x92, 0x83, 0x74),
+            accent: Color32::from_rgb(0xb8, 0xbb, 0x26),
+            accent_hover: Color32::from_rgb(0xd8, 0xe0, 0x4b),
+            on_accent: Color32::from_rgb(0x1d, 0x20, 0x21),
+            danger: Color32::from_rgb(0xfb, 0x49, 0x34),
+            warning: Color32::from_rgb(0xfa, 0xbd, 0x2f),
+            overlay: Color32::from_rgb(0x32, 0x30, 0x2f),
+            shadow: Color32::from_black_alpha(150),
+        }
+    }
+
+    pub fn everforest() -> Self {
+        Self {
+            dark: true,
+            window: Color32::from_rgb(0x1e, 0x23, 0x26),
+            panel: Color32::from_rgb(0x27, 0x2e, 0x33),
+            surface: Color32::from_rgb(0x2e, 0x38, 0x3c),
+            surface_hover: Color32::from_rgb(0x37, 0x41, 0x45),
+            surface_active: Color32::from_rgb(0x49, 0x51, 0x56),
+            outline: Color32::from_rgb(0x49, 0x51, 0x56),
+            text: Color32::from_rgb(0xd3, 0xc6, 0xaa),
+            secondary: Color32::from_rgb(0x9d, 0xa9, 0xa0),
+            dim: Color32::from_rgb(0x7a, 0x84, 0x78),
+            accent: Color32::from_rgb(0xa7, 0xc0, 0x80),
+            accent_hover: Color32::from_rgb(0xc1, 0xd6, 0x9b),
+            on_accent: Color32::from_rgb(0x1e, 0x23, 0x26),
+            danger: Color32::from_rgb(0xe6, 0x7e, 0x80),
+            warning: Color32::from_rgb(0xdb, 0xbc, 0x7f),
+            overlay: Color32::from_rgb(0x2e, 0x38, 0x3c),
+            shadow: Color32::from_black_alpha(150),
+        }
+    }
+
     /// A colour derived from album art, softened so it can sit behind text.
     pub fn tint_from_art(&self, rgb: [u8; 3]) -> Color32 {
         let [r, g, b] = rgb.map(|c| c as f32 / 255.0);

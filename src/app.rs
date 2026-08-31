@@ -169,7 +169,7 @@ pub struct App {
     /// Sample data is loaded; Spotify requests are disabled.
     pub offline: bool,
     pub palette: Palette,
-    applied_dark: Option<bool>,
+    applied_theme: Option<(ThemeChoice, bool)>,
 
     pub auth: AuthStatus,
     pub user: Option<User>,
@@ -459,7 +459,7 @@ impl App {
             control_devices_stale: true,
             offline: false,
             palette: Palette::dark(),
-            applied_dark: None,
+            applied_theme: None,
             auth: AuthStatus::Starting,
             user: None,
             local_device_id: None,
@@ -613,11 +613,14 @@ impl App {
         theme::install(ctx);
         ctx.add_bytes_loader(std::sync::Arc::new(self.backend.art().clone()));
         ctx.set_theme(match self.settings.theme {
-            ThemeChoice::Dark => egui::ThemePreference::Dark,
+            ThemeChoice::Dark
+            | ThemeChoice::Kintsugi
+            | ThemeChoice::Gruvbox
+            | ThemeChoice::Everforest => egui::ThemePreference::Dark,
             ThemeChoice::Light => egui::ThemePreference::Light,
             ThemeChoice::System => egui::ThemePreference::System,
         });
-        self.applied_dark = None;
+        self.applied_theme = None;
         self.winamp.forget_textures();
         self.window_hidden = false;
         self.hide_intent = false;
@@ -1801,14 +1804,19 @@ impl App {
 
     fn apply_theme(&mut self, ctx: &egui::Context) {
         let dark = ctx.theme() == egui::Theme::Dark;
-        if self.applied_dark != Some(dark) {
-            self.palette = if dark {
-                Palette::dark()
-            } else {
-                Palette::light()
+        let applied = (self.settings.theme, dark);
+        if self.applied_theme != Some(applied) {
+            self.palette = match self.settings.theme {
+                ThemeChoice::Dark => Palette::dark(),
+                ThemeChoice::Kintsugi => Palette::kintsugi(),
+                ThemeChoice::Gruvbox => Palette::gruvbox(),
+                ThemeChoice::Everforest => Palette::everforest(),
+                ThemeChoice::Light => Palette::light(),
+                ThemeChoice::System if dark => Palette::dark(),
+                ThemeChoice::System => Palette::light(),
             };
             theme::apply(ctx, &self.palette);
-            self.applied_dark = Some(dark);
+            self.applied_theme = Some(applied);
             self.accents.clear();
             self.accent_pending.clear();
         }
@@ -4881,7 +4889,10 @@ impl App {
             Action::SettingsChanged => {
                 self.settings_dirty = true;
                 ctx.set_theme(match self.settings.theme {
-                    ThemeChoice::Dark => egui::ThemePreference::Dark,
+                    ThemeChoice::Dark
+                    | ThemeChoice::Kintsugi
+                    | ThemeChoice::Gruvbox
+                    | ThemeChoice::Everforest => egui::ThemePreference::Dark,
                     ThemeChoice::Light => egui::ThemePreference::Light,
                     ThemeChoice::System => egui::ThemePreference::System,
                 });
