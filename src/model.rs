@@ -312,7 +312,10 @@ impl<T> CursorList<T> {
 #[derive(Default)]
 pub struct Library {
     pub playlists: Loadable<Vec<Playlist>>,
+    /// A complete replacement being assembled while the visible list stays put.
+    pub playlists_pending: Vec<Playlist>,
     pub playlists_next: Option<u32>,
+    pub playlists_refreshing: bool,
     pub liked: PagedList<SavedTrack>,
     pub albums: PagedList<SavedAlbum>,
     pub artists: CursorList<Artist>,
@@ -640,6 +643,7 @@ pub enum Action {
     ClearQueue,
     /// Save the current and upcoming queue as a playlist.
     SaveQueueAsPlaylist,
+    RefreshLibrary,
     RefreshQueue,
     CopyLink(String),
     /// Open a web page in the browser.

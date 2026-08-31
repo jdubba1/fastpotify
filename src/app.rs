@@ -2067,10 +2067,14 @@ impl App {
     // ---- loading ---------------------------------------------------------------
 
     fn load_playlists(&mut self) {
-        if self.library.playlists.is_loading() {
+        if self.library.playlists_refreshing {
             return;
         }
-        self.library.playlists = Loadable::Loading;
+        self.library.playlists_refreshing = true;
+        self.library.playlists_pending.clear();
+        if self.library.playlists.needs_load() {
+            self.library.playlists = Loadable::Loading;
+        }
         self.library.playlists_next = None;
         self.backend.api(ApiRequest::MyPlaylists { offset: 0 });
     }
@@ -3087,14 +3091,18 @@ impl App {
             ApiResponse::MyPlaylists { offset, result } => match result {
                 Ok(page) => {
                     let next_offset = page.next_offset();
-                    match &mut self.library.playlists {
-                        Loadable::Loaded(existing) if offset > 0 => existing.extend(page.items),
-                        slot => *slot = Loadable::Loaded(page.items),
+                    if offset == 0 {
+                        self.library.playlists_pending = page.items;
+                    } else {
+                        self.library.playlists_pending.extend(page.items);
                     }
                     self.library.playlists_next = next_offset;
                     if next_offset.is_some() {
                         self.load_more(Page::Home);
                     } else {
+                        let playlists = std::mem::take(&mut self.library.playlists_pending);
+                        self.library.playlists = Loadable::Loaded(playlists);
+                        self.library.playlists_refreshing = false;
                         // Load folder order after all playlists arrive.
                         self.backend.send(Command::Rootlist);
                     }
@@ -3105,10 +3113,12 @@ impl App {
                     }
                 }
                 Err(error) => {
-                    if offset == 0 {
-                        self.library.playlists = Loadable::Failed(error.to_string());
+                    self.library.playlists_pending.clear();
+                    self.library.playlists_refreshing = false;
+                    if self.library.playlists.get().is_some() {
+                        self.toast_error(format!("Couldn't refresh Your Library: {error}"));
                     } else {
-                        self.toast_error(format!("Couldn't load more playlists: {error}"));
+                        self.library.playlists = Loadable::Failed(error.to_string());
                     }
                 }
             },
@@ -4758,6 +4768,7 @@ impl App {
             }
             Action::ClearQueue => self.clear_queue(),
             Action::SaveQueueAsPlaylist => self.save_queue_as_playlist(),
+            Action::RefreshLibrary => self.load_playlists(),
             Action::RefreshQueue => self.refresh_queue(true),
             Action::CopyLink(uri) => {
                 if let Some(url) = util::open_spotify_url(&uri) {
