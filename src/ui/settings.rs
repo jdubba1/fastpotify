@@ -19,18 +19,17 @@ fn shelf_controls(
     limit: &mut u8,
     max: u8,
 ) {
-    ui.horizontal(|ui| {
-        ui.spacing_mut().item_spacing.x = 6.0;
-        if theme::soft_button(ui, palette, None, "-", false).clicked() {
-            *limit = limit.saturating_sub(1).max(1);
-        }
-        theme::text(ui, limit.to_string(), theme::medium(13.5), palette.text);
-        if theme::soft_button(ui, palette, None, "+", false).clicked() {
-            *limit = limit.saturating_add(1).min(max);
-        }
-        ui.add_space(6.0);
-        widgets::switch(ui, palette, visible);
-    });
+    // This is drawn inside a right-to-left control lane. Adding the switch
+    // first keeps it at the far right while the count reads "- 8 +" before it.
+    widgets::switch(ui, palette, visible);
+    ui.add_space(6.0);
+    if theme::soft_button(ui, palette, None, "+", false).clicked() {
+        *limit = limit.saturating_add(1).min(max);
+    }
+    theme::text(ui, limit.to_string(), theme::medium(13.5), palette.text);
+    if theme::soft_button(ui, palette, None, "-", false).clicked() {
+        *limit = limit.saturating_sub(1).max(1);
+    }
 }
 
 fn section(
@@ -58,9 +57,36 @@ fn section(
     ui.add_space(8.0);
 }
 
+fn home_group(ui: &mut egui::Ui, palette: &Palette, add_contents: impl FnOnce(&mut egui::Ui)) {
+    Frame::new()
+        .fill(
+            palette
+                .surface
+                .gamma_multiply(if palette.dark { 0.7 } else { 1.0 }),
+        )
+        .stroke(Stroke::new(1.0, palette.outline))
+        .corner_radius(CornerRadius::same(theme::RADIUS + 2))
+        .inner_margin(Margin::symmetric(20, 16))
+        .show(ui, |ui| {
+            ui.set_width(ui.available_width().min(760.0));
+            add_contents(ui);
+        });
+    ui.add_space(10.0);
+}
+
 fn home_settings(app: &mut App, ui: &mut egui::Ui, palette: &Palette) -> bool {
     let before = app.settings.home;
-    section(ui, palette, "Home", |ui| {
+    ui.add_space(10.0);
+    theme::text(ui, "Home", theme::bold(18.0), palette.text);
+    theme::text(
+        ui,
+        "Choose which shelves exist, how large they are, and what fills them.",
+        theme::regular(12.5),
+        palette.secondary,
+    );
+    ui.add_space(10.0);
+
+    home_group(ui, palette, |ui| {
         widgets::setting_row(
             ui,
             palette,
@@ -90,7 +116,9 @@ fn home_settings(app: &mut App, ui: &mut egui::Ui, palette: &Palette) -> bool {
                 });
             },
         );
+    });
 
+    home_group(ui, palette, |ui| {
         widgets::setting_row(
             ui,
             palette,
@@ -137,7 +165,9 @@ fn home_settings(app: &mut App, ui: &mut egui::Ui, palette: &Palette) -> bool {
                 widgets::switch(ui, palette, enabled);
             });
         }
+    });
 
+    home_group(ui, palette, |ui| {
         widgets::setting_row(
             ui,
             palette,
@@ -179,38 +209,41 @@ fn home_settings(app: &mut App, ui: &mut egui::Ui, palette: &Palette) -> bool {
                 widgets::switch(ui, palette, enabled);
             });
         }
+    });
 
-        for (label, description, shelf, max) in [
-            (
-                "Recently played",
-                "Show the row and choose how many unique tracks it contains.",
-                &mut app.settings.home.recently_played,
-                50,
-            ),
-            (
-                "Top artists",
-                "Show the medium-term artist ranking and choose its size.",
-                &mut app.settings.home.top_artists,
-                20,
-            ),
-            (
-                "Top songs",
-                "Show the short-term song ranking and choose its size.",
-                &mut app.settings.home.top_songs,
-                20,
-            ),
-            (
-                "Recommendations",
-                "Show Spotify recommendations seeded from your top songs.",
-                &mut app.settings.home.recommendations,
-                20,
-            ),
-        ] {
+    for (label, description, shelf, max) in [
+        (
+            "Recently played",
+            "Show the row and choose how many unique tracks it contains.",
+            &mut app.settings.home.recently_played,
+            50,
+        ),
+        (
+            "Top artists",
+            "Show the medium-term artist ranking and choose its size.",
+            &mut app.settings.home.top_artists,
+            20,
+        ),
+        (
+            "Top songs",
+            "Show the short-term song ranking and choose its size.",
+            &mut app.settings.home.top_songs,
+            20,
+        ),
+        (
+            "Recommendations",
+            "Show Spotify recommendations seeded from your top songs.",
+            &mut app.settings.home.recommendations,
+            20,
+        ),
+    ] {
+        home_group(ui, palette, |ui| {
             widgets::setting_row(ui, palette, label, description, |ui| {
                 shelf_controls(ui, palette, &mut shelf.visible, &mut shelf.limit, max);
             });
-        }
-    });
+        });
+    }
+    ui.add_space(2.0);
     app.settings.home != before
 }
 
