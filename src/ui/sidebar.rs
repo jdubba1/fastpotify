@@ -363,6 +363,28 @@ fn contents(app: &mut App, ui: &mut egui::Ui) {
                     app.library.filter.clear();
                 }
             }
+            let refreshing = app.library.playlists_refreshing;
+            if theme::icon_button(
+                ui,
+                Icon::Refresh,
+                16.0,
+                if refreshing {
+                    palette.dim
+                } else {
+                    palette.secondary
+                },
+                palette.text,
+                if refreshing {
+                    "Refreshing Your Library"
+                } else {
+                    "Refresh Your Library"
+                },
+            )
+            .clicked()
+                && !refreshing
+            {
+                app.actions.push(Action::RefreshLibrary);
+            }
         });
     });
     ui.add_space(6.0);
